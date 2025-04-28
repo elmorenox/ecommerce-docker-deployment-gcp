@@ -1,0 +1,30 @@
+                                                    List of relations
+ Schema |               Name                |   Type   | Owner  | Persistence | Access method |    Size    | Description 
+--------+-----------------------------------+----------+--------+-------------+---------------+------------+-------------
+ public | account_billingaddress            | table    | userdb | permanent   | heap          | 16 kB      | 
+ public | account_billingaddress_id_seq     | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | account_ordermodel                | table    | userdb | permanent   | heap          | 16 kB      | 
+ public | account_ordermodel_id_seq         | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | account_stripemodel               | table    | userdb | permanent   | heap          | 16 kB      | 
+ public | account_stripemodel_id_seq        | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | auth_group                        | table    | userdb | permanent   | heap          | 0 bytes    | 
+ public | auth_group_id_seq                 | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | auth_group_permissions            | table    | userdb | permanent   | heap          | 0 bytes    | 
+ public | auth_group_permissions_id_seq     | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | auth_permission                   | table    | userdb | permanent   | heap          | 8192 bytes | 
+ public | auth_permission_id_seq            | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | auth_user                         | table    | userdb | permanent   | heap          | 16 kB      | 
+ public | auth_user_groups                  | table    | userdb | permanent   | heap          | 0 bytes    | 
+ public | auth_user_groups_id_seq           | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | auth_user_id_seq                  | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | auth_user_user_permissions        | table    | userdb | permanent   | heap          | 0 bytes    | 
+ public | auth_user_user_permissions_id_seq | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | django_admin_log                  | table    | userdb | permanent   | heap          | 72 kB      | 
+ public | django_admin_log_id_seq           | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | django_content_type               | table    | userdb | permanent   | heap          | 8192 bytes | 
+ public | django_content_type_id_seq        | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | django_migrations                 | table    | userdb | permanent   | heap          | 16 kB      | 
+ public | django_migrations_id_seq          | sequence | userdb | permanent   |               | 8192 bytes | 
+ public | django_session                    | table    | userdb | permanent   | heap          | 16 kB      | 
+ public | product_product                   | table    | userdb | permanent   | heap          | 16 kB      | 
+ public | product_product_id_seq            | sequence | userdb | permanent   |               | 8192 bytes | 

@@ -1,0 +1,39 @@
+{
+  "Resources": [
+    {
+      "Type": "AvailabilityZone",
+      "Count": 2
+    },
+    {
+      "Type": "VPC",
+      "Count": 1
+    },
+    {
+      "Type": "Subnet",
+      "Subtype": "Public",
+      "Count": 2
+    },
+    {
+      "Type": "Subnet",
+      "Subtype": "Private",
+      "Count": 2
+    },
+    {
+      "Type": "Compute",
+      "Subtype": "EC2",
+      "Count": 3,
+      "InstanceType": "t2.micro"
+    },
+    {
+      "Type": "Compute",
+      "Subtype": "EC2",
+      "Count": 1,
+      "InstanceType": "t2.medium"
+    },
+    {
+      "Type": "Database",
+      "Subtype": "RDS",
+      "Count": 1
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+FROM node:14
+
+WORKDIR /app
+
+# Copy frontend directory contents
+COPY frontend/ .
+
+# Install dependencies
+RUN npm install
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+

@@ -1,0 +1,25 @@
+[
+  {
+    "user": "LuisMorenoStudent743_500",
+    "attached_policies": {
+      "AttachedPolicies": [
+        {
+          "PolicyName": "AdministratorAccess",
+          "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"
+        },
+        {
+          "PolicyName": "IAMUserChangePassword",
+          "PolicyArn": "arn:aws:iam::aws:policy/IAMUserChangePassword"
+        }
+      ]
+    },
+    "inline_policies": {
+      "PolicyNames": [
+        "JohnPolicy"
+      ]
+    },
+    "groups": {
+      "Groups": []
+    }
+  }
+]

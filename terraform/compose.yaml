@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    image: morenodoesinfra/ecommerce-be:latest
+    environment:
+      - DB_HOST=${rds_endpoint}
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python manage.py migrate --noinput || true &&
+            (python manage.py dumpdata --database=sqlite --natural-foreign --natural-primary -e contenttypes -e auth.Permission --indent 4 > datadump.json || true) &&
+            (python manage.py loaddata datadump.json || true) &&
+            rm -f db.sqlite3 &&
+            python manage.py runserver 0.0.0.0:8000"
+
+  frontend:
+    image: morenodoesinfra/ecommerce-fe:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'

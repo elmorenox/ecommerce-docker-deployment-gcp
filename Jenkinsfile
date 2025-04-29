@@ -5,9 +5,9 @@ pipeline {
     
     environment {
         DOCKER_CREDS = credentials('docker-hub-credentials')
-        AWS_CREDS = credentials('aws-credentials')
+        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-service-account')
     }
-    
+        
     stages {
         stage('Cleanup') {
             steps {
@@ -59,8 +59,6 @@ pipeline {
             steps {
                 dir('terraform') {
                     sh '''
-                        export AWS_ACCESS_KEY_ID=$AWS_CREDS_USR
-                        export AWS_SECRET_ACCESS_KEY=$AWS_CREDS_PSW
                         terraform init
                         terraform apply -auto-approve \
                             -var="dockerhub_username=${DOCKER_CREDS_USR}" \

@@ -1,7 +1,7 @@
 provider "google" {
   project = var.project_id
   region  = "us-east1"
-  zone    = "us-east1-a"
+  zone    = "us-east1-b"
 }
 
 # Note: SSH keys are managed manually at the project level
@@ -62,7 +62,7 @@ resource "google_compute_firewall" "jenkins_worker_firewall" {
 resource "google_compute_instance" "jenkins_controller" {
   name         = "jenkins-controller"
   machine_type = "e2-small"
-  zone         = "us-east1-a"
+  zone         = "us-east1-b"
   tags         = ["jenkins", "jenkins-controller"]
 
   boot_disk {
@@ -101,7 +101,7 @@ resource "google_compute_instance" "jenkins_controller" {
 resource "google_compute_instance" "jenkins_node" {
   name         = "jenkins-node"
   machine_type = "e2-medium"
-  zone         = "us-east1-a"
+  zone         = "us-east1-b"
   tags         = ["jenkins", "jenkins-node"]
 
   boot_disk {

@@ -28,15 +28,22 @@ echo "$SSH_PRIVATE_KEY" > /var/lib/jenkins/.ssh/id_rsa
 chmod 600 /var/lib/jenkins/.ssh/id_rsa
 chown -R jenkins:jenkins /var/lib/jenkins/.ssh
 
-# Clone the configuration repository or create local config directory
-git clone https://github.com/elmorenox/ecommerce-docker-deployment-gcp/tree/main/jenkins-terraform/config /tmp/jenkins-config || {
-  echo "Failed to clone config repository, using local config files"
-  mkdir -p /opt/jenkins-config
-  cp -r /opt/jenkins-config/* /tmp/jenkins-config/ || {
-    echo "No local config files found, creating config directory"
-    mkdir -p /tmp/jenkins-config
-  }
-}
+# Clone the configuration repository with sparse checkout
+echo "Cloning configuration repository..."
+git clone \
+  --depth 1 \
+  --filter=blob:none \
+  --sparse \
+  https://github.com/elmorenox/ecommerce-docker-deployment-gcp.git \
+  /tmp/jenkins-config
+  
+cd /tmp/jenkins-config
+
+git sparse-checkout set jenkins-terraform/config
+
+CONFIG_DIR="/tmp/jenkins-config/jenkins-terraform/config"
+
+echo "config dir: $CONFIG_DIR"
 
 # Start Jenkins service
 systemctl start jenkins
@@ -55,29 +62,23 @@ echo "Initial Jenkins admin password: $ADMIN_PASSWORD"
 # Download the Jenkins CLI
 wget http://localhost:8080/jnlpJars/jenkins-cli.jar -O /tmp/jenkins-cli.jar
 
-# Wait for Jenkins to be fully initialized
-echo "Waiting for Jenkins to be fully initialized..."
-retry_count=0
-max_retries=12
-until java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD list-plugins > /dev/null 2>&1 || [ $retry_count -eq $max_retries ]; do
-  retry_count=$((retry_count+1))
-  sleep 30
-  echo "Waiting for Jenkins to be ready... ($retry_count/$max_retries)"
-done
+echo "sleep 60 after jenkins cli download"
+sleep 60
 
-if [ $retry_count -eq $max_retries ]; then
-  echo "Jenkins did not become ready in time. Continuing anyway..."
-fi
-
-# Install required plugins
+# Install required plugins with force restart
 echo "Installing required plugins..."
-java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD install-plugin git workflow-aggregator pipeline-model-definition docker-workflow blueocean credentials-binding
+java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD install-plugin \
+  git workflow-aggregator pipeline-model-definition docker-workflow blueocean credentials-binding -restart
+
+# Extended wait for Jenkins to fully restart
+echo "Waiting extended time (90s) for Jenkins to restart after plugin installation..."
+sleep 90
 
 # Get Docker credentials from metadata for inline XML
 DOCKER_USERNAME=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/attributes/docker_hub_username" -H "Metadata-Flavor: Google")
 DOCKER_PASSWORD=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/attributes/docker_hub_password" -H "Metadata-Flavor: Google")
 
-# Create Docker Hub credentials inline (with variable substitution)
+# Create Docker Hub credentials inline
 cat > /tmp/docker-credentials.xml << EOF
 <?xml version="1.1" encoding="UTF-8"?>
 <com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl>
@@ -91,18 +92,36 @@ EOF
 
 # Create the SSH credentials from config file
 echo "Creating SSH credentials..."
-java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD create-credentials-by-xml system::system::jenkins _ < /tmp/jenkins-config/config/credentials.xml
+java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD create-credentials-by-xml \
+  system::system::jenkins _ < "$CONFIG_DIR/credentials.xml" || {
+  echo "WARNING: Failed to create SSH credentials but proceeding anyway"
+}
 
 # Add the Docker Hub credentials
-java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD create-credentials-by-xml system::system::jenkins _ < /tmp/docker-credentials.xml
+echo "Adding Docker Hub credentials..."
+java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD create-credentials-by-xml \
+  system::system::jenkins _ < /tmp/docker-credentials.xml || {
+  echo "WARNING: Failed to create Docker credentials but proceeding anyway"
+}
 
-# Create the node using the XML configuration file
+# Create the node
 echo "Creating node jenkins-node..."
-java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD create-node "jenkins-node" < /tmp/jenkins-config/config/node.xml
+java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD create-node \
+  "jenkins-node" < "$CONFIG_DIR/node.xml" || {
+  echo "WARNING: Failed to create node but proceeding anyway"
+}
 
-# Create the pipeline job using the job_config.xml file
+# Create the pipeline job
 echo "Creating job 'workload_4'..."
-java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD create-job workload_4 < /tmp/jenkins-config/config/job_config.xml
+java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD create-job \
+  workload_4 < "$CONFIG_DIR/job-config.xml" || {
+  echo "WARNING: Failed to create job but proceeding anyway"
+}
 
-# Restart Jenkins to apply changes
-java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD safe-restart
+# Final restart with safety checks
+echo "Performing safe restart..."
+java -jar /tmp/jenkins-cli.jar -s http://localhost:8080 -auth admin:$ADMIN_PASSWORD safe-restart || {
+  echo "WARNING: Safe restart command failed but proceeding anyway"
+}
+
+echo "Jenkins setup completed with possible warnings. Check /var/log/jenkins-startup.log for details."

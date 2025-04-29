@@ -1,130 +1,132 @@
-provider "aws" {
-  region = "us-east-1"
+provider "google" {
+  project = var.project_id
+  region  = "us-east1"
+  zone    = "us-east1-a"
 }
+
+# Note: SSH keys are managed manually at the project level
+# Command to add SSH keys to project metadata:
+# gcloud compute project-info add-metadata --metadata ssh-keys="ubuntu:$(cat ~/.ssh/id_rsa.pub)"
 
 # VPC Resources
-resource "aws_vpc" "jenkins_vpc" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+resource "google_compute_network" "jenkins_vpc" {
+  name                    = "jenkins-vpc"
+  auto_create_subnetworks = false
+}
 
-  tags = {
-    Name = "jenkins-vpc"
+resource "google_compute_subnetwork" "jenkins_subnet" {
+  name          = "jenkins-subnet"
+  ip_cidr_range = "10.0.1.0/24"
+  region        = "us-central1"
+  network       = google_compute_network.jenkins_vpc.id
+}
+
+# Firewall Rules
+resource "google_compute_firewall" "jenkins_firewall" {
+  name    = "jenkins-firewall"
+  network = google_compute_network.jenkins_vpc.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "8080", "50000"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["jenkins"]
+}
+
+# No need for additional resources to copy config files
+# All configuration is embedded directly in the controller-userdata.sh script
+
+# Compute Instances
+resource "google_compute_instance" "jenkins_controller" {
+  name         = "jenkins-controller"
+  machine_type = "e2-small"
+  zone         = "us-central1-a"
+  tags         = ["jenkins", "controller"]
+
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      size  = 20
+    }
+  }
+
+  network_interface {
+    network    = google_compute_network.jenkins_vpc.name
+    subnetwork = google_compute_subnetwork.jenkins_subnet.name
+    network_ip = "10.0.1.5"  # Static internal IP
+    access_config {
+      // Ephemeral public IP
+    }
+  }
+
+  # Provide SSH private key and Docker credentials to the controller via metadata
+  metadata = {
+    ssh_private_key     = file(var.ssh_private_key_file)
+    docker_hub_username = var.docker_hub_username
+    docker_hub_password = var.docker_hub_password
+  }
+
+  # Use simple startup script without templating
+  metadata_startup_script = file("scripts/controller-userdata.sh")
+
+  # Configure with broad cloud-platform scope (recommended by Google)
+  service_account {
+    email  = var.service_account_email
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
 }
 
-resource "aws_subnet" "jenkins_subnet" {
-  vpc_id                  = aws_vpc.jenkins_vpc.id
-  cidr_block              = "10.0.1.0/24"
-  map_public_ip_on_launch = true
-  availability_zone       = "us-east-1a"
+resource "google_compute_instance" "jenkins_node" {
+  name         = "jenkins-node"
+  machine_type = "e2-medium"
+  zone         = "us-central1-a"
+  tags         = ["jenkins", "node"]
 
-  tags = {
-    Name = "jenkins-subnet"
-  }
-}
-
-resource "aws_internet_gateway" "jenkins_igw" {
-  vpc_id = aws_vpc.jenkins_vpc.id
-
-  tags = {
-    Name = "jenkins-igw"
-  }
-}
-
-resource "aws_route_table" "jenkins_rt" {
-  vpc_id = aws_vpc.jenkins_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.jenkins_igw.id
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      size  = 30
+    }
   }
 
-  tags = {
-    Name = "jenkins-rt"
-  }
-}
-
-resource "aws_route_table_association" "jenkins_rta" {
-  subnet_id      = aws_subnet.jenkins_subnet.id
-  route_table_id = aws_route_table.jenkins_rt.id
-}
-
-# Security Group
-resource "aws_security_group" "jenkins_sg" {
-  name        = "jenkins-sg"
-  description = "Security group for Jenkins instances"
-  vpc_id      = aws_vpc.jenkins_vpc.id
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  network_interface {
+    network    = google_compute_network.jenkins_vpc.name
+    subnetwork = google_compute_subnetwork.jenkins_subnet.name
+    network_ip = "10.0.1.10"  # Static internal IP
+    access_config {
+      // Ephemeral public IP
+    }
   }
 
-  ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  # Add service account key to node via template
+  metadata = {
+    # No need to include service account key in metadata
   }
 
-  ingress {
-    from_port   = 50000
-    to_port     = 50000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # Use startup script without service account key
+  metadata_startup_script = file("scripts/node-userdata.sh")
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "jenkins-sg"
-  }
-}
-
-# EC2 Instances
-resource "aws_instance" "jenkins_controller" {
-  ami           = "ami-0c7217cdde317cfec"  # Ubuntu 22.04 LTS AMI ID for us-east-1
-  instance_type = "t2.micro"
-  key_name      = var.key_name
-  subnet_id     = aws_subnet.jenkins_subnet.id
-
-  vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
-
-  user_data = file("scripts/controller-userdata.sh")
-
-  tags = {
-    Name = "Jenkins"
-  }
-}
-
-resource "aws_instance" "jenkins_node" {
-  ami           = "ami-0c7217cdde317cfec"  # Ubuntu 22.04 LTS AMI ID for us-east-1
-  instance_type = "t2.medium"
-  key_name      = var.key_name
-  subnet_id     = aws_subnet.jenkins_subnet.id
-
-  vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
-
-  user_data = file("scripts/node-userdata.sh")
-
-  tags = {
-    Name = "Jenkins-Node"
+  service_account {
+    email  = var.service_account_email
+    scopes = ["cloud-platform"]
   }
 }
 
 # Outputs
 output "controller_public_ip" {
-  value = aws_instance.jenkins_controller.public_ip
+  value = google_compute_instance.jenkins_controller.network_interface.0.access_config.0.nat_ip
+}
+
+output "controller_internal_ip" {
+  value = google_compute_instance.jenkins_controller.network_interface.0.network_ip
 }
 
 output "node_public_ip" {
-  value = aws_instance.jenkins_node.public_ip
+  value = google_compute_instance.jenkins_node.network_interface.0.access_config.0.nat_ip
+}
+
+output "node_internal_ip" {
+  value = google_compute_instance.jenkins_node.network_interface.0.network_ip
 }

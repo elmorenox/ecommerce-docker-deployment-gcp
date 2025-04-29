@@ -14,16 +14,25 @@ resource "google_compute_network" "jenkins_vpc" {
   auto_create_subnetworks = false
 }
 
+# Public subnet for controller
 resource "google_compute_subnetwork" "jenkins_subnet" {
   name          = "jenkins-subnet"
   ip_cidr_range = "10.0.1.0/24"
-  region        = "us-central1"
+  region        = "us-east1"
   network       = google_compute_network.jenkins_vpc.id
 }
 
-# Firewall Rules
-resource "google_compute_firewall" "jenkins_firewall" {
-  name    = "jenkins-firewall"
+# Private subnet for worker node
+resource "google_compute_subnetwork" "jenkins_private_subnet" {
+  name          = "jenkins-private-subnet"
+  ip_cidr_range = "10.0.2.0/24"
+  region        = "us-east1"
+  network       = google_compute_network.jenkins_vpc.id
+}
+
+# Firewall Rules for public access to controller
+resource "google_compute_firewall" "jenkins_controller_firewall" {
+  name    = "jenkins-controller-firewall"
   network = google_compute_network.jenkins_vpc.name
 
   allow {
@@ -32,18 +41,29 @@ resource "google_compute_firewall" "jenkins_firewall" {
   }
 
   source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["jenkins"]
+  target_tags   = ["jenkins-controller"]
 }
 
-# No need for additional resources to copy config files
-# All configuration is embedded directly in the controller-userdata.sh script
+# Firewall Rules for private access to worker
+resource "google_compute_firewall" "jenkins_worker_firewall" {
+  name    = "jenkins-worker-firewall"
+  network = google_compute_network.jenkins_vpc.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["10.0.1.0/24"]
+  target_tags   = ["jenkins-node"]
+}
 
 # Compute Instances
 resource "google_compute_instance" "jenkins_controller" {
   name         = "jenkins-controller"
   machine_type = "e2-small"
-  zone         = "us-central1-a"
-  tags         = ["jenkins", "controller"]
+  zone         = "us-east1-a"
+  tags         = ["jenkins", "jenkins-controller"]
 
   boot_disk {
     initialize_params {
@@ -81,8 +101,8 @@ resource "google_compute_instance" "jenkins_controller" {
 resource "google_compute_instance" "jenkins_node" {
   name         = "jenkins-node"
   machine_type = "e2-medium"
-  zone         = "us-central1-a"
-  tags         = ["jenkins", "node"]
+  zone         = "us-east1-a"
+  tags         = ["jenkins", "jenkins-node"]
 
   boot_disk {
     initialize_params {
@@ -93,16 +113,9 @@ resource "google_compute_instance" "jenkins_node" {
 
   network_interface {
     network    = google_compute_network.jenkins_vpc.name
-    subnetwork = google_compute_subnetwork.jenkins_subnet.name
-    network_ip = "10.0.1.10"  # Static internal IP
-    access_config {
-      // Ephemeral public IP
-    }
-  }
-
-  # Add service account key to node via template
-  metadata = {
-    # No need to include service account key in metadata
+    subnetwork = google_compute_subnetwork.jenkins_private_subnet.name
+    network_ip = "10.0.2.10"  # Static internal IP in private subnet
+    # No access_config block = no external IP
   }
 
   # Use startup script without service account key
@@ -121,10 +134,6 @@ output "controller_public_ip" {
 
 output "controller_internal_ip" {
   value = google_compute_instance.jenkins_controller.network_interface.0.network_ip
-}
-
-output "node_public_ip" {
-  value = google_compute_instance.jenkins_node.network_interface.0.access_config.0.nat_ip
 }
 
 output "node_internal_ip" {

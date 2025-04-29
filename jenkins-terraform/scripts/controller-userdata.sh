@@ -16,7 +16,7 @@ apt update
 apt install -y jenkins
 
 # Add the hardcoded node IP to hosts file
-echo "10.0.1.10 jenkins-node" >> /etc/hosts
+echo "10.0.2.10 jenkins-node" >> /etc/hosts
 
 # Get the SSH key from metadata
 mkdir -p /var/lib/jenkins/.ssh
@@ -29,7 +29,7 @@ chmod 600 /var/lib/jenkins/.ssh/id_rsa
 chown -R jenkins:jenkins /var/lib/jenkins/.ssh
 
 # Clone the configuration repository or create local config directory
-git clone https://github.com/elmorenox/jenkins-config.git /tmp/jenkins-config || {
+git clone https://github.com/elmorenox/ecommerce-docker-deployment-gcp/tree/main/jenkins-terraform/config /tmp/jenkins-config || {
   echo "Failed to clone config repository, using local config files"
   mkdir -p /opt/jenkins-config
   cp -r /opt/jenkins-config/* /tmp/jenkins-config/ || {

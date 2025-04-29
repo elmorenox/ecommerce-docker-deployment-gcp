@@ -7,7 +7,7 @@
   <mode>NORMAL</mode>
   <retentionStrategy class="hudson.slaves.RetentionStrategy$Always"/>
   <launcher class="hudson.plugins.sshslaves.SSHLauncher" plugin="ssh-slaves">
-    <host>10.0.1.10</host>
+    <host>10.0.2.10</host>
     <port>22</port>
     <credentialsId>ubuntu-ssh</credentialsId>
     <launchTimeoutSeconds>210</launchTimeoutSeconds>

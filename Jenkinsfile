@@ -43,16 +43,16 @@ pipeline {
                 sh 'echo $DOCKER_CREDS_PSW | sudo docker login -u $DOCKER_CREDS_USR --password-stdin'
                 
                 sh """
-                    sudo docker build \
-                        -t morenodoesinfra/ecommerce-be:latest \
+                    sudo docker build \\
+                        -t morenodoesinfra/ecommerce-be:latest \\
                         -f Dockerfile.backend .
                     
                     sudo docker push morenodoesinfra/ecommerce-be:latest
                 """
                 
                 sh """
-                    sudo docker build \
-                        -t morenodoesinfra/ecommerce-fe:latest \
+                    sudo docker build \\
+                        -t morenodoesinfra/ecommerce-fe:latest \\
                         -f Dockerfile.frontend .
                         
                     sudo docker push morenodoesinfra/ecommerce-fe:latest
@@ -72,14 +72,15 @@ pipeline {
                     cd terraform
                     terraform init
                     
-                    terraform apply -auto-approve \
-                        -var="project_id=${PROJECT_ID}" \
-                        -var="service_account_email=${SERVICE_ACCOUNT}" \
-                        -var="dockerhub_username=${DOCKER_CREDS_USR}" \
+                    terraform apply -auto-approve \\
+                        -var="project_id=${PROJECT_ID}" \\
+                        -var="service_account_email=${SERVICE_ACCOUNT}" \\
+                        -var="dockerhub_username=${DOCKER_CREDS_USR}" \\
                         -var="dockerhub_password=${DOCKER_CREDS_PSW}"
                 '''
             }
         }
+    }
     
     post {
         always {

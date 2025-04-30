@@ -6,7 +6,7 @@ sudo rm -f /etc/apt/sources.list.d/google-cloud-sdk.list
 
 # Install basic packages
 sudo apt update
-sudo apt install -y fontconfig openssh-server curl apt-transport-https ca-certificates gnupg software-properties-common
+sudo apt install -y fontconfig openjdk-17-jre openssh-server curl apt-transport-https ca-certificates gnupg software-properties-common
 
 sudp apt install python3-dev libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev
 

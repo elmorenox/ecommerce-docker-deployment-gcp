@@ -64,10 +64,9 @@ pipeline {
             steps {
                 sh '''
                     # Get project ID from instance metadata
-                    PROJECT_ID=$(curl -s "http://metadata.google.internal/computeMetadata/v1/project/project-id" -H "Metadata-Flavor: Google")
-                    
+                    PROJECT_ID=$(gcloud config get-value project)                    
                     # Get service account email from instance metadata
-                    SERVICE_ACCOUNT=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email" -H "Metadata-Flavor: Google")
+                    SERVICE_ACCOUNT=$(gcloud iam service-accounts list --format="value(email)" --filter="displayName:jenkins" | head -n 1)
                     
                     # Use these values in Terraform
                     cd terraform

@@ -133,10 +133,6 @@ resource "google_compute_instance" "jenkins_node" {
     # No access_config block = no external IP
   }
 
-    metadata = {
-    project_id     = var.project_id
-  }
-
   metadata_startup_script = file("scripts/node-userdata.sh")
 
   service_account {

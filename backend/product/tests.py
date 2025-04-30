@@ -10,6 +10,8 @@ from .views import ProductCreateView, ProductDeleteView, ProductEditView
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+import os
+
 
 class ProductApiTest(TestCase):
 

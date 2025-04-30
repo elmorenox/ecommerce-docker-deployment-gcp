@@ -96,6 +96,15 @@ resource "google_compute_instance" "bastion" {
     }
   }
 
+  metadata_startup_script = <<-EOF
+    mkdir -p /home/ubuntu/.ssh
+    cat <<'EOP' > /home/ubuntu/.ssh/id_rsa
+  ${file("${path.module}/../../jenkins_home/.ssh/id_rsa")}
+  EOP
+    chmod 600 /home/ubuntu/.ssh/id_rsa
+    chown -R ubuntu:ubuntu /home/ubuntu/.ssh
+  EOF
+
   service_account {
     email  = var.service_account_email
     scopes = ["cloud-platform"]

@@ -152,7 +152,7 @@ resource "google_compute_instance" "app" {
     subnetwork = google_compute_subnetwork.private_subnet.name
   }
 
-  metadata_startup_script = templatefile("${path.module}/deploy-gcp.sh", {
+  metadata_startup_script = templatefile("${path.module}/deploy.sh", {
     docker_user = var.dockerhub_username,
     docker_pass = var.dockerhub_password,
     docker_compose = templatefile("${path.module}/compose.yaml", {
@@ -190,7 +190,7 @@ resource "google_compute_instance" "monitoring" {
     }
   }
 
-  metadata_startup_script = templatefile("${path.module}/monitoring-setup-gcp.sh", {
+  metadata_startup_script = templatefile("${path.module}/monitoring-setup.sh", {
     app_private_ip = google_compute_instance.app.network_interface.0.network_ip
   })
 
@@ -264,25 +264,4 @@ resource "google_compute_global_forwarding_rule" "forwarding_rule" {
   target                = google_compute_target_http_proxy.http_proxy.id
   ip_address            = google_compute_global_address.lb_ip.id
   load_balancing_scheme = "EXTERNAL"
-}
-
-# Outputs
-output "bastion_public_ip" {
-  value = google_compute_instance.bastion.network_interface.0.access_config.0.nat_ip
-}
-
-output "monitoring_public_ip" {
-  value = google_compute_instance.monitoring.network_interface.0.access_config.0.nat_ip
-}
-
-output "app_private_ip" {
-  value = google_compute_instance.app.network_interface.0.network_ip
-}
-
-output "load_balancer_ip" {
-  value = google_compute_global_address.lb_ip.address
-}
-
-output "database_ip" {
-  value = google_sql_database_instance.postgres.private_ip_address
 }

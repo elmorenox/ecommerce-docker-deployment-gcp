@@ -177,7 +177,7 @@ resource "google_compute_instance" "app" {
     docker_user = var.dockerhub_username,
     docker_pass = var.dockerhub_password,
     docker_compose = templatefile("${path.module}/compose.yaml", {
-      database_endpoint = "${google_sql_database_instance.postgres.private_ip_address}:5432"
+      database_endpoint = "${google_sql_database_instance.postgres.connection_name}:5432"
     })
   })
 

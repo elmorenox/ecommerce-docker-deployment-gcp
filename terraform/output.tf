@@ -1,6 +1,6 @@
 # GCP-specific outputs
 output "database_endpoint" {
-  value = "${google_sql_database_instance.postgres.private_ip_address}:5432"
+  value = google_sql_database_instance.postgres.connection_name
   description = "Cloud SQL database endpoint"
 }
 

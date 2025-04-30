@@ -4,7 +4,7 @@ services:
   backend:
     image: morenodoesinfra/ecommerce-be:latest
     environment:
-      - DB_HOST=${rds_endpoint}
+      - DB_HOST=${database_endpoint}
     ports:
       - "8000:8000"
     command: >

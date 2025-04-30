@@ -5,7 +5,6 @@ pipeline {
     
     environment {
         DOCKER_CREDS = credentials('docker-hub-credentials')
-        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-service-account')
     }
         
     stages {
@@ -46,7 +45,7 @@ pipeline {
                 
                 // Build and push frontend
                 sh """
-                   sudo docker build \
+                    sudo docker build \
                         -t morenodoesinfra/ecommerce-fe:latest \
                         -f Dockerfile.frontend .
                         
@@ -55,19 +54,23 @@ pipeline {
             }
         }
 
-        stage('Infrastructure') {
+        stage('GCP Infrastructure') {
             steps {
+                // Verify GCP credentials are available
+                sh 'gcloud auth list'
+                
                 dir('terraform') {
                     sh '''
                         terraform init
+                        
                         terraform apply -auto-approve \
                             -var="dockerhub_username=${DOCKER_CREDS_USR}" \
-                            -var="dockerhub_password=${DOCKER_CREDS_PSW}"
+                            -var="dockerhub_password=${DOCKER_CREDS_PSW}" \
+                            -var="service_account_email=${GCP_SERVICE_ACCOUNT}"
                     '''
                 }
             }
         }
-    }
     
     post {
         always {
@@ -75,6 +78,12 @@ pipeline {
                 sudo docker logout
                 sudo docker system prune -f
             '''
+        }
+        success {
+            echo 'Deployment to GCP completed successfully!'
+        }
+        failure {
+            echo 'Deployment to GCP failed. Check the logs for details.'
         }
     }
 }

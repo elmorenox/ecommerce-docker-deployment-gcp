@@ -1,385 +1,288 @@
-provider "aws" {
-  region = "us-east-1"
+provider "google" {
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
 }
 
-# VPC
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  tags = {
-    Name = "ecommerce-vpc"
-  }
+# VPC Network
+resource "google_compute_network" "ecommerce_vpc" {
+  name                    = "ecommerce-vpc"
+  auto_create_subnetworks = false
 }
 
-# Internet Gateway
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "ecommerce-igw"
-  }
+# Public subnet for ALB and bastion host
+resource "google_compute_subnetwork" "public_subnet" {
+  name          = "ecommerce-public-subnet"
+  ip_cidr_range = "10.0.1.0/24"
+  region        = var.region
+  network       = google_compute_network.ecommerce_vpc.id
 }
 
-# Fetch AZs in the current region
-data "aws_availability_zones" "available" {}
+# Private subnet for app and database
+resource "google_compute_subnetwork" "private_subnet" {
+  name          = "ecommerce-private-subnet"
+  ip_cidr_range = "10.0.2.0/24"
+  region        = var.region
+  network       = google_compute_network.ecommerce_vpc.id
+}
 
-# Public subnets in each AZ
-resource "aws_subnet" "public" {
-  count             = 2
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.${count.index + 1}.0/24"
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+# Router for NAT gateway
+resource "google_compute_router" "router" {
+  name    = "ecommerce-router"
+  region  = var.region
+  network = google_compute_network.ecommerce_vpc.id
+}
+
+# Cloud NAT for private subnet internet access
+resource "google_compute_router_nat" "nat" {
+  name                               = "ecommerce-nat"
+  router                             = google_compute_router.router.name
+  region                             = var.region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
   
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "ecommerce-public-${count.index + 1}"
+  subnetwork {
+    name                    = google_compute_subnetwork.private_subnet.id
+    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
   }
 }
 
-# Private subnets in each AZ
-resource "aws_subnet" "private" {
-  count             = 2
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.${count.index + 10}.0/24"
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+# Firewall rule for public subnet
+resource "google_compute_firewall" "public_firewall" {
+  name    = "ecommerce-public-firewall"
+  network = google_compute_network.ecommerce_vpc.name
 
-  tags = {
-    Name = "ecommerce-private-${count.index + 1}"
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "80", "443", "3000", "9090"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["public"]
+}
+
+# Firewall rule for private subnet (access from public subnet)
+resource "google_compute_firewall" "private_firewall" {
+  name    = "ecommerce-private-firewall"
+  network = google_compute_network.ecommerce_vpc.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "3000", "8000", "5432"]
+  }
+
+  source_ranges = ["10.0.1.0/24"]
+  target_tags   = ["private"]
+}
+
+# Bastion host
+resource "google_compute_instance" "bastion" {
+  name         = "ecommerce-bastion"
+  machine_type = "e2-micro"
+  zone         = var.zone
+  tags         = ["public", "bastion"]
+
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+    }
+  }
+
+  network_interface {
+    network    = google_compute_network.ecommerce_vpc.name
+    subnetwork = google_compute_subnetwork.public_subnet.name
+    access_config {
+      // Ephemeral public IP
+    }
+  }
+
+  service_account {
+    email  = var.service_account_email
+    scopes = ["cloud-platform"]
   }
 }
 
-# NAT Gateway
-resource "aws_nat_gateway" "main" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
+# Cloud SQL instance (PostgreSQL)
+resource "google_sql_database_instance" "postgres" {
+  name             = "ecommerce-db-instance"
+  database_version = "POSTGRES_14"
+  region           = var.region
 
-  tags = {
-    Name = "ecommerce-nat"
+  settings {
+    tier = "db-f1-micro"
+    
+    ip_configuration {
+      ipv4_enabled    = false
+      private_network = google_compute_network.ecommerce_vpc.id
+    }
   }
 
-  depends_on = [aws_internet_gateway.main]
+  deletion_protection = false
 }
 
-# Elastic IP for NAT
-resource "aws_eip" "nat" {
-  domain = "vpc"
+# Database
+resource "google_sql_database" "database" {
+  name     = var.db_name
+  instance = google_sql_database_instance.postgres.name
 }
 
-# Route table for public subnets
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-
-  tags = {
-    Name = "ecommerce-public-rt"
-  }
+# Database user
+resource "google_sql_user" "user" {
+  name     = var.db_username
+  instance = google_sql_database_instance.postgres.name
+  password = var.db_password
 }
 
-# Route table for private subnets
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
+# App instance
+resource "google_compute_instance" "app" {
+  name         = "ecommerce-app"
+  machine_type = "e2-small"
+  zone         = var.zone
+  tags         = ["private", "app"]
 
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      size  = 20
+    }
   }
 
-  tags = {
-    Name = "ecommerce-private-rt"
-  }
-}
-
-# Route table associations
-resource "aws_route_table_association" "public" {
-  count          = 2
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_route_table_association" "private" {
-  count          = 2
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
-}
-
-# Security group for RDS
-resource "aws_security_group" "rds" {
-  name        = "ecommerce-rds-sg"
-  description = "Security group for RDS"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ec2.id, aws_security_group.bastion.id]
+  network_interface {
+    network    = google_compute_network.ecommerce_vpc.name
+    subnetwork = google_compute_subnetwork.private_subnet.name
   }
 
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["44.221.216.0/32"] 
-  }
-}
-
-# Security group for EC2
-resource "aws_security_group" "ec2" {
-  name        = "ecommerce-ec2-sg"
-  description = "Security group for EC2"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 8000
-    to_port     = 8000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "monitoring" {
-  name        = "ecommerce-monitoring-sg"
-  description = "Security group for monitoring instance"
-  vpc_id      = aws_vpc.main.id  # Add VPC ID
-
-  ingress {
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Prometheus UI
-  }
-
-  ingress {
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Grafana UI
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # SSH
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "ecommerce-monitoring-sg"
-  }
-}
-
-
-# RDS subnet group
-resource "aws_db_subnet_group" "main" {
-  name       = "ecommerce-db-subnet"
-  subnet_ids = aws_subnet.private[*].id
-
-  tags = {
-    Name = "ecommerce-db-subnet-group"
-  }
-}
-
-#monitoring ec2
-resource "aws_instance" "monitoring" {
-  ami           = "ami-0c7217cdde317cfec"
-  instance_type = "t3.micro"
-  subnet_id     = aws_subnet.public[0].id
-  key_name      = var.key_name
-
-  vpc_security_group_ids = [aws_security_group.monitoring.id]
-
-  user_data = base64encode(templatefile("${path.module}/monitoring-setup.sh", {
-    app_private_ip = aws_instance.app.private_ip
-  }))
-
-  tags = {
-    Name = "ecommerce-monitoring"
-  }
-}
-
-# RDS instance
-resource "aws_db_instance" "main" {
-  identifier           = "ecommerce-db"
-  allocated_storage    = 20
-  storage_type         = "gp2"
-  engine              = "postgres"
-  engine_version      = "14.13"
-  instance_class      = "db.t3.micro"
-  db_name             = var.db_name
-  username            = var.db_username
-  password            = var.db_password
-  skip_final_snapshot = true
-
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-
-  tags = {
-    Name = "ecommerce-db"
-  }
-}
-
-# EC2 Instance
-resource "aws_instance" "app" {
-  ami           = "ami-0c7217cdde317cfec"
-  instance_type = "t2.micro"
-  subnet_id     = aws_subnet.private[0].id
-
-  depends_on = [aws_db_instance.main]
-
-  vpc_security_group_ids = [aws_security_group.ec2.id]
-  key_name              = var.key_name
-
-  user_data = base64encode(templatefile("${path.module}/deploy.sh", {
-    rds_endpoint = aws_db_instance.main.endpoint,
+  metadata_startup_script = templatefile("${path.module}/deploy-gcp.sh", {
     docker_user = var.dockerhub_username,
     docker_pass = var.dockerhub_password,
     docker_compose = templatefile("${path.module}/compose.yaml", {
-      rds_endpoint = aws_db_instance.main.endpoint
+      database_endpoint = "${google_sql_database_instance.postgres.private_ip_address}:5432"
     })
-  }))
+  })
 
-  tags = {
-    Name = "ecommerce-app"
+  service_account {
+    email  = var.service_account_email
+    scopes = ["cloud-platform"]
+  }
+
+  depends_on = [google_sql_database.database, google_sql_user.user]
+}
+
+# Monitoring instance
+resource "google_compute_instance" "monitoring" {
+  name         = "ecommerce-monitoring"
+  machine_type = "e2-small"
+  zone         = var.zone
+  tags         = ["public", "monitoring"]
+
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      size  = 20
+    }
+  }
+
+  network_interface {
+    network    = google_compute_network.ecommerce_vpc.name
+    subnetwork = google_compute_subnetwork.public_subnet.name
+    access_config {
+      // Ephemeral public IP
+    }
+  }
+
+  metadata_startup_script = templatefile("${path.module}/monitoring-setup-gcp.sh", {
+    app_private_ip = google_compute_instance.app.network_interface.0.network_ip
+  })
+
+  service_account {
+    email  = var.service_account_email
+    scopes = ["cloud-platform"]
   }
 }
 
-# ALB Security Group
-resource "aws_security_group" "alb" {
-  name        = "ecommerce-alb-sg"
-  description = "Security group for ALB"
-  vpc_id      = aws_vpc.main.id
+# Load Balancer
+# Reserve a static external IP address
+resource "google_compute_global_address" "lb_ip" {
+  name = "ecommerce-lb-ip"
+}
 
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Allow public access
-  }
+# HTTP health check
+resource "google_compute_health_check" "http_health_check" {
+  name               = "ecommerce-http-health-check"
+  timeout_sec        = 5
+  check_interval_sec = 10
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  http_health_check {
+    port         = 3000
+    request_path = "/"
   }
 }
 
-# ALB
-resource "aws_lb" "frontend" {
-  name               = "ecommerce-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id
+# Backend service
+resource "google_compute_backend_service" "backend" {
+  name                  = "ecommerce-backend-service"
+  protocol              = "HTTP"
+  port_name             = "http"
+  timeout_sec           = 30
+  health_checks         = [google_compute_health_check.http_health_check.id]
+  load_balancing_scheme = "EXTERNAL"
 
-  enable_deletion_protection = false
-
-  tags = {
-    Name = "ecommerce-alb"
+  backend {
+    group = google_compute_instance_group.app_group.id
   }
 }
 
-# ALB Listener
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.frontend.arn
-  port              = 80
-  protocol          = "HTTP"
+# Instance group
+resource "google_compute_instance_group" "app_group" {
+  name      = "ecommerce-instance-group"
+  zone      = var.zone
+  instances = [google_compute_instance.app.id]
 
-  default_action {
-    type = "forward"
-
-    target_group_arn = aws_lb_target_group.frontend.arn
+  named_port {
+    name = "http"
+    port = 3000
   }
 }
 
-# ALB Target Group for Frontend
-resource "aws_lb_target_group" "frontend" {
-  name     = "ecommerce-frontend-tg"
-  port     = 3000 
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-
-  health_check {
-    path                = "/" 
-    interval            = 30
-    timeout             = 5
-    healthy_threshold  = 2
-    unhealthy_threshold = 2
-  }
+# URL map
+resource "google_compute_url_map" "url_map" {
+  name            = "ecommerce-url-map"
+  default_service = google_compute_backend_service.backend.id
 }
 
-# Register EC2 Instance with Target Group for Frontend
-resource "aws_lb_target_group_attachment" "app" {
-  target_group_arn = aws_lb_target_group.frontend.arn
-  target_id        = aws_instance.app.id
-  port             = 3000  
+# HTTP proxy
+resource "google_compute_target_http_proxy" "http_proxy" {
+  name    = "ecommerce-http-proxy"
+  url_map = google_compute_url_map.url_map.id
 }
 
-# Security Group for Bastion Host
-resource "aws_security_group" "bastion" {
-  name        = "ecommerce-bastion-sg"
-  description = "Security group for Bastion Host"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+# Global forwarding rule
+resource "google_compute_global_forwarding_rule" "forwarding_rule" {
+  name                  = "ecommerce-forwarding-rule"
+  ip_protocol           = "TCP"
+  port_range            = "80"
+  target                = google_compute_target_http_proxy.http_proxy.id
+  ip_address            = google_compute_global_address.lb_ip.id
+  load_balancing_scheme = "EXTERNAL"
 }
 
-# Bastion Host EC2 Instance
-resource "aws_instance" "bastion" {
-  ami                    = "ami-0c7217cdde317cfec"
-  instance_type         = "t2.micro"
-  subnet_id             = aws_subnet.public[0].id
-  vpc_security_group_ids = [aws_security_group.bastion.id]
-  key_name              = var.key_name  # Ensure you have access to this key
+# Outputs
+output "bastion_public_ip" {
+  value = google_compute_instance.bastion.network_interface.0.access_config.0.nat_ip
+}
 
-  tags = {
-    Name = "ecommerce-bastion"
-  }
+output "monitoring_public_ip" {
+  value = google_compute_instance.monitoring.network_interface.0.access_config.0.nat_ip
+}
+
+output "app_private_ip" {
+  value = google_compute_instance.app.network_interface.0.network_ip
+}
+
+output "load_balancer_ip" {
+  value = google_compute_global_address.lb_ip.address
+}
+
+output "database_ip" {
+  value = google_sql_database_instance.postgres.private_ip_address
 }

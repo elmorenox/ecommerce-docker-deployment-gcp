@@ -1,14 +1,24 @@
 #!/bin/bash
 
+# Add logging
+exec > >(tee /var/log/monitoring-setup.log) 2>&1
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting monitoring setup on GCP..."
+
 # Update and install Docker
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Updating packages..."
 apt-get update
-apt-get install -y docker.io docker-compose
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Installing Docker..."
+apt-get install -y docker.io
+apt-get install -y python3-pip
+pip3 install docker-compose
 
 # Create directories
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating monitoring directories..."
 mkdir -p /etc/prometheus
 mkdir -p /etc/grafana
 
 # Create prometheus.yml
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating Prometheus configuration..."
 cat > /etc/prometheus/prometheus.yml <<EOF
 global:
   scrape_interval: 15s
@@ -20,6 +30,7 @@ scrape_configs:
 EOF
 
 # Create docker-compose.yml for monitoring
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating docker-compose.yml..."
 cat > /etc/prometheus/docker-compose.yml <<EOF
 version: '3.8'
 services:
@@ -31,6 +42,7 @@ services:
       - /etc/prometheus:/etc/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+    restart: always
 
   grafana:
     image: grafana/grafana:latest
@@ -40,8 +52,31 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - prometheus
+    restart: always
+EOF
+
+# Create Grafana dashboard configuration
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating Grafana dashboard provisioning..."
+mkdir -p /etc/grafana/provisioning/datasources
+mkdir -p /etc/grafana/provisioning/dashboards
+
+cat > /etc/grafana/provisioning/datasources/prometheus.yml <<EOF
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
 EOF
 
 # Start monitoring stack
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting monitoring stack..."
 cd /etc/prometheus
 docker-compose up -d
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Monitoring setup complete."
+echo "Prometheus URL: http://localhost:9090"
+echo "Grafana URL: http://localhost:3000"
+echo "Grafana login: admin / admin"

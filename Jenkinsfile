@@ -27,7 +27,7 @@ pipeline {
                     export DJANGO_TEST_DATABASE=sqlite
                     
                     # Create migrations if they don't exist
-                    python3 manage.py makemigrations product
+                    python3 manage.py makemigrations
                     
                     # Apply migrations to SQLite
                     python3 manage.py migrate

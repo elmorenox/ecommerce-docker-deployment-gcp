@@ -62,20 +62,25 @@ pipeline {
 
         stage('GCP Infrastructure') {
             steps {
-                sh 'gcloud auth list'
-                
-                dir('terraform') {
-                    sh '''
-                        terraform init
-                        terraform apply -auto-approve \
-                            -var="dockerhub_username=${DOCKER_CREDS_USR}" \
-                            -var="dockerhub_password=${DOCKER_CREDS_PSW}" \
-                            -var="service_account_email=${GCP_SERVICE_ACCOUNT}"
-                    '''
-                }
+                sh '''
+                    # Get project ID from instance metadata
+                    PROJECT_ID=$(curl -s "http://metadata.google.internal/computeMetadata/v1/project/project-id" -H "Metadata-Flavor: Google")
+                    
+                    # Get service account email from instance metadata
+                    SERVICE_ACCOUNT=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email" -H "Metadata-Flavor: Google")
+                    
+                    # Use these values in Terraform
+                    cd terraform
+                    terraform init
+                    
+                    terraform apply -auto-approve \
+                        -var="project_id=${PROJECT_ID}" \
+                        -var="service_account_email=${SERVICE_ACCOUNT}" \
+                        -var="dockerhub_username=${DOCKER_CREDS_USR}" \
+                        -var="dockerhub_password=${DOCKER_CREDS_PSW}"
+                '''
             }
         }
-    }
     
     post {
         always {

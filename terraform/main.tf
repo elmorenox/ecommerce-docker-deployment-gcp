@@ -1,7 +1,7 @@
 provider "google" {
   project = var.project_id
-  region  = var.region
-  zone    = var.zone
+  region  = "us-east1"
+  zone    = "us-east1-b"
 }
 
 # VPC Network
@@ -14,7 +14,7 @@ resource "google_compute_network" "ecommerce_vpc" {
 resource "google_compute_subnetwork" "public_subnet" {
   name          = "ecommerce-public-subnet"
   ip_cidr_range = "10.0.1.0/24"
-  region        = var.region
+  region        = "us-east1"
   network       = google_compute_network.ecommerce_vpc.id
 }
 
@@ -22,14 +22,14 @@ resource "google_compute_subnetwork" "public_subnet" {
 resource "google_compute_subnetwork" "private_subnet" {
   name          = "ecommerce-private-subnet"
   ip_cidr_range = "10.0.2.0/24"
-  region        = var.region
+  region        = "us-east1"
   network       = google_compute_network.ecommerce_vpc.id
 }
 
 # Router for NAT gateway
 resource "google_compute_router" "router" {
   name    = "ecommerce-router"
-  region  = var.region
+  region  = "us-east1"
   network = google_compute_network.ecommerce_vpc.id
 }
 
@@ -37,7 +37,7 @@ resource "google_compute_router" "router" {
 resource "google_compute_router_nat" "nat" {
   name                               = "ecommerce-nat"
   router                             = google_compute_router.router.name
-  region                             = var.region
+  region                             = "us-east1"
   nat_ip_allocate_option             = "AUTO_ONLY"
   source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
   
@@ -79,7 +79,7 @@ resource "google_compute_firewall" "private_firewall" {
 resource "google_compute_instance" "bastion" {
   name         = "ecommerce-bastion"
   machine_type = "e2-micro"
-  zone         = var.zone
+  zone         = "us-east1-b"
   tags         = ["public", "bastion"]
 
   boot_disk {
@@ -106,7 +106,7 @@ resource "google_compute_instance" "bastion" {
 resource "google_sql_database_instance" "postgres" {
   name             = "ecommerce-db-instance"
   database_version = "POSTGRES_14"
-  region           = var.region
+  region           = "us-east1"
 
   settings {
     tier = "db-f1-micro"
@@ -137,7 +137,7 @@ resource "google_sql_user" "user" {
 resource "google_compute_instance" "app" {
   name         = "ecommerce-app"
   machine_type = "e2-small"
-  zone         = var.zone
+  zone         = "us-east1-b"
   tags         = ["private", "app"]
 
   boot_disk {
@@ -172,7 +172,7 @@ resource "google_compute_instance" "app" {
 resource "google_compute_instance" "monitoring" {
   name         = "ecommerce-monitoring"
   machine_type = "e2-small"
-  zone         = var.zone
+  zone         = "us-east1-b"
   tags         = ["public", "monitoring"]
 
   boot_disk {
@@ -235,7 +235,7 @@ resource "google_compute_backend_service" "backend" {
 # Instance group
 resource "google_compute_instance_group" "app_group" {
   name      = "ecommerce-instance-group"
-  zone      = var.zone
+  zone      = "us-east1-b"
   instances = [google_compute_instance.app.id]
 
   named_port {

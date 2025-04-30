@@ -1,8 +1,6 @@
 #!/bin/bash
 # Must be run as root or with sudo
 
-echo "export GCP_SERVICE_ACCOUNT=$(curl -s 'http://metadata.google.internal/computeMetadata/v1/instance/attributes/service_account_email' -H 'Metadata-Flavor: Google')" | sudo tee -a /etc/profile.d/gcp-env.sh
-
 # First, fix any conflicting sources
 sudo rm -f /etc/apt/sources.list.d/google-cloud-sdk.list
 

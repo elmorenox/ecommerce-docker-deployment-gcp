@@ -133,6 +133,10 @@ resource "google_compute_instance" "jenkins_node" {
     # No access_config block = no external IP
   }
 
+  metadata = {
+      ssh_private_key     = file(var.ssh_private_key_file)
+  }
+
   metadata_startup_script = file("scripts/node-userdata.sh")
 
   service_account {

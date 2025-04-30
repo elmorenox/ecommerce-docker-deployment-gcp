@@ -96,8 +96,8 @@ resource "google_compute_instance" "bastion" {
     }
   }
 
-  metadata_startup_script = templatefile("${path.module}/bastion-setup.sh", {
-    private_key = sensitive(file("/var/lib/jenkins/.ssh/id_rsa"))
+  metadata_startup_script = templatefile("${path.module}/bastion.sh", {
+    private_key = sensitive(file("/home/ubuntu/.ssh/id_rsa"))
   })
 
   service_account {

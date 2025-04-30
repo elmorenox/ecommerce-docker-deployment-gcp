@@ -28,3 +28,10 @@ sudo apt install -y docker-ce docker-ce-cli containerd.io google-cloud-cli terra
 
 # Add ubuntu user to docker group
 sudo usermod -aG docker ubuntu
+
+echo "$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/ssh_private_key)" > /home/ubuntu/.ssh/id_rsa
+
+# Set proper permissions
+chmod 700 /home/ubuntu/.ssh
+chmod 600 /home/ubuntu/.ssh/id_rsa
+chown -R ubuntu:ubuntu /home/ubuntu/.ssh

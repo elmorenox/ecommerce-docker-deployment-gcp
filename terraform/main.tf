@@ -102,11 +102,28 @@ resource "google_compute_instance" "bastion" {
   }
 }
 
-# Cloud SQL instance (PostgreSQL)
+# Reserve an IP range for the service networking connection
+resource "google_compute_global_address" "private_ip_address" {
+  name          = "private-ip-address"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = google_compute_network.ecommerce_vpc.id
+}
+
+# Create the service networking connection
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = google_compute_network.ecommerce_vpc.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+}
+
+# Update your SQL instance to depend on the connection
 resource "google_sql_database_instance" "postgres" {
   name             = "ecommerce-db-instance"
   database_version = "POSTGRES_14"
-  region           = "us-east1"
+  region           = var.region
+  depends_on       = [google_service_networking_connection.private_vpc_connection]
 
   settings {
     tier = "db-f1-micro"

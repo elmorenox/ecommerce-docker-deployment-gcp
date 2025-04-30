@@ -11,7 +11,19 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Package update complete"
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Installing Docker..."
 apt-get install -y docker.io
 apt-get install -y python3-pip
-pip3 install docker-compose
+sudo apt-get install -y ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# 3. Verify both Docker and Compose
+docker --version
+docker compose version
+
+sudo systemctl start docker
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Docker installation complete"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting Docker login..."
@@ -30,11 +42,11 @@ EOF
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] docker-compose.yml created"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Pulling Docker images..."
-docker-compose pull
+sudo docker compose pull
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Images pulled"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting containers..."
-docker-compose up -d --force-recreate
+sudo docker compose up -d --force-recreate
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Containers started"
 
 # Install node exporter for monitoring
@@ -70,6 +82,6 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Node exporter started"
 
 # Final cleanup
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Running cleanup..."
-docker system prune -f
-docker logout
+sudo docker system prune -f
+sudo docker logout
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deployment and cleanup complete"

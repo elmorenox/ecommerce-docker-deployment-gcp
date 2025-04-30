@@ -11,10 +11,7 @@ pipeline {
         stage('Cleanup') {
             steps {
                 sh '''
-                    # Only clean Docker system
                     sudo docker system prune -f
-                    
-                    # Safer git clean that preserves terraform state
                     git clean -ffdx -e "*.tfstate*" -e ".terraform/*"
                 '''
             }
@@ -34,7 +31,6 @@ pipeline {
             steps {
                 sh 'echo $DOCKER_CREDS_PSW | sudo docker login -u $DOCKER_CREDS_USR --password-stdin'
                 
-                // Build and push backend
                 sh """
                     sudo docker build \
                         -t morenodoesinfra/ecommerce-be:latest \
@@ -43,7 +39,6 @@ pipeline {
                     sudo docker push morenodoesinfra/ecommerce-be:latest
                 """
                 
-                // Build and push frontend
                 sh """
                     sudo docker build \
                         -t morenodoesinfra/ecommerce-fe:latest \
@@ -56,13 +51,11 @@ pipeline {
 
         stage('GCP Infrastructure') {
             steps {
-                // Verify GCP credentials are available
                 sh 'gcloud auth list'
                 
                 dir('terraform') {
                     sh '''
                         terraform init
-                        
                         terraform apply -auto-approve \
                             -var="dockerhub_username=${DOCKER_CREDS_USR}" \
                             -var="dockerhub_password=${DOCKER_CREDS_PSW}" \
@@ -71,6 +64,7 @@ pipeline {
                 }
             }
         }
+    }
     
     post {
         always {

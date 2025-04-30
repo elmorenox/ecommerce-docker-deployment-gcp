@@ -64,10 +64,12 @@ pipeline {
             steps {
                 sh '''
                     # Get project ID from instance metadata
-                    PROJECT_ID=$(gcloud config get-value project)                    
+                    PROJECT_ID=$(gcloud config get-value project)
+                    echo "project id: $PROJECT_ID"                    
                     # Get service account email from instance metadata
-                    SERVICE_ACCOUNT=$(gcloud iam service-accounts list --format="value(email)" --filter="displayName:jenkins" | head -n 1)
-                    
+                    SERVICE_ACCOUNT=$(gcloud auth list --format="value(account)" | head -n 1)
+                    echo "svc account: $SERVICE_ACCOUNT"
+
                     # Use these values in Terraform
                     cd terraform
                     terraform init

@@ -22,7 +22,17 @@ pipeline {
                 sh '''
                     cd backend
                     python3 -m pip install -r requirements.txt
+                    
+                    # Use sqlite for tests
                     export DJANGO_TEST_DATABASE=sqlite
+                    
+                    # Create migrations if they don't exist
+                    python3 manage.py makemigrations product
+                    
+                    # Apply migrations to SQLite
+                    python3 manage.py migrate --database=sqlite
+                    
+                    # Run the tests with SQLite
                     python3 manage.py test product.tests
                 '''
             }

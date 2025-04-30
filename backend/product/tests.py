@@ -102,8 +102,8 @@ class ProductApisAuthTest(ProductApisSetUp):
         user = User.objects.get(username='testuser') # not an admin
         view = ProductCreateView.as_view()
 
-        image = SimpleUploadedFile("computer_chair.jpg", content=open("static\images\computer_chair.jpg", 'rb').read(), content_type='image/jpeg')
-
+        image_path = os.path.join('static', 'images', 'computer_chair.jpg')
+        image = SimpleUploadedFile("computer_chair.jpg", content=open(image_path, 'rb').read(), content_type='image/jpeg')
         new_product = {
             "name": "smart phone",
             "description": "great phone",

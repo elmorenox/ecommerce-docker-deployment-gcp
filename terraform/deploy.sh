@@ -24,6 +24,7 @@ docker --version
 docker compose version
 
 sudo systemctl start docker
+sleep 10
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Docker installation complete"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting Docker login..."

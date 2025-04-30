@@ -1,6 +1,6 @@
 # GCP-specific outputs
 output "database_endpoint" {
-  value = google_sql_database_instance.postgres.connection_name
+  value = google_sql_database_instance.postgres.private_ip_address
   description = "Cloud SQL database endpoint"
 }
 

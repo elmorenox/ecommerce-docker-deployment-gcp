@@ -61,6 +61,20 @@ resource "google_compute_firewall" "public_firewall" {
   target_tags   = ["public"]
 }
 
+resource "google_compute_firewall" "lb_health_checks" {
+  name = "ecommerce-healh-checks"
+  network = google_compute_network.ecommerce_vpc.name
+
+
+  allow { 
+    protocol = "tcp"
+    ports = ["3000"] 
+  }
+
+  source_ranges = ["130.211.0.0/22", "35.191.0.0/16"]
+  target_tags   = ["app"] 
+}
+
 # Firewall rule for private subnet (access from public subnet)
 resource "google_compute_firewall" "private_firewall" {
   name    = "ecommerce-private-firewall"
@@ -177,7 +191,7 @@ resource "google_compute_instance" "app" {
     docker_user = var.dockerhub_username,
     docker_pass = var.dockerhub_password,
     docker_compose = templatefile("${path.module}/compose.yaml", {
-      database_endpoint = "${google_sql_database_instance.postgres.connection_name}:5432"
+      database_endpoint = "${google_sql_database_instance.postgres.private_ip_address}:5432"
     })
   })
 

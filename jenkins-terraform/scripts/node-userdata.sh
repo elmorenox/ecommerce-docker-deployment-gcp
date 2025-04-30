@@ -10,6 +10,8 @@ sudo rm -f /etc/apt/sources.list.d/google-cloud-sdk.list
 sudo apt update
 sudo apt install -y fontconfig openssh-server curl apt-transport-https ca-certificates gnupg software-properties-common
 
+sudp apt install python3-dev libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev
+
 # Install Docker with manual key fetching
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 sudo add-apt-repository "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"

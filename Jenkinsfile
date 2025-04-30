@@ -22,6 +22,7 @@ pipeline {
                 sh '''
                     cd backend
                     python3 -m pip install -r requirements.txt
+                    export DJANGO_TEST_DATABASE=sqlite
                     python3 manage.py test product.tests
                 '''
             }

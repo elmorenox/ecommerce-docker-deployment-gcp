@@ -81,20 +81,31 @@ WSGI_APPLICATION = 'my_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ecommerce',
-        'USER': 'userdb',
-        'PASSWORD': 'abcd1234',
-        'HOST': os.environ.get('DB_HOST', '').split(':')[0],
-        'PORT': '5432',
-    }, 
-    'sqlite': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+import os
+
+# Database configuration
+if os.environ.get('DJANGO_TEST_DATABASE') == 'sqlite':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'ecommerce',
+            'USER': 'userdb',
+            'PASSWORD': 'abcd1234',
+            'HOST': os.environ.get('DB_HOST', '').split(':')[0],
+            'PORT': '5432',
+        },
+        'sqlite': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation

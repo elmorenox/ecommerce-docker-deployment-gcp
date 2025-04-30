@@ -30,7 +30,7 @@ pipeline {
                     python3 manage.py makemigrations product
                     
                     # Apply migrations to SQLite
-                    python3 manage.py migrate --database=sqlite
+                    python3 manage.py migrate
                     
                     # Run the tests with SQLite
                     python3 manage.py test product.tests

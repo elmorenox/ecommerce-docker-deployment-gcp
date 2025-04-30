@@ -25,6 +25,14 @@ pipeline {
                     
                     # Use sqlite for tests
                     export DJANGO_TEST_DATABASE=sqlite
+
+                    # Debug - Check paths and permissions
+                    echo "Current working directory: $(pwd)"
+                    ls -la static/images/computer_chair.jpg
+                    
+                    # Fix permissions just in case
+                    chmod 644 static/images/*.jpg
+                    
                     
                     # Create migrations if they don't exist
                     python3 manage.py makemigrations

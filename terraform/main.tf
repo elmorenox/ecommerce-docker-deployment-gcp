@@ -82,7 +82,7 @@ resource "google_compute_firewall" "private_firewall" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "3000", "8000", "5432"]
+    ports    = ["22", "3000", "8000", "5432", "9100"]
   }
 
   source_ranges = ["10.0.1.0/24"]

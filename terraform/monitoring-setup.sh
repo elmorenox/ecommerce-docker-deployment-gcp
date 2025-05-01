@@ -71,6 +71,7 @@ services:
       - /etc/prometheus:/etc/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-admin-api'  # Enable admin API
     restart: always
 
   grafana:
@@ -79,6 +80,8 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true  # Enable anonymous access
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin  # Give anonymous users Admin role
     depends_on:
       - prometheus
     restart: always

@@ -5,7 +5,7 @@
       "Count": 2
     },
     {
-      "Type": "AvailabilityZone",
+      "Type": "Zone",
       "Count": 2
     },
     {
@@ -20,25 +20,25 @@
     },
     {
       "Type": "Compute",
-      "Subtype": "EC2",
-      "InstanceType": "t2.micro",
+      "Subtype": "Compute Engine",
+      "InstanceType": "e2-small",
       "Count": 4
     },
     {
       "Type": "Compute",
-      "Subtype": "EC2",
-      "InstanceType": "t2.medium",
+      "Subtype": "Compute Engine",
+      "InstanceType": "e2-medium",
       "Count": 1
     },
     {
       "Type": "Compute",
-      "Subtype": "EC2",
-      "InstanceType": "t3.micro",
+      "Subtype": "Compute Engine",
+      "InstanceType": "e2-small",
       "Count": 1
     },
     {
       "Type": "Database",
-      "Subtype": "RDS",
+      "Subtype": "CloudSQL",
       "Engine": "Postgres",
       "Count": 1
     }

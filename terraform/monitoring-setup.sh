@@ -44,7 +44,8 @@ sleep 5
 # Create directories
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating monitoring directories..."
 mkdir -p /etc/prometheus
-mkdir -p /etc/grafana
+mkdir -p /etc/grafana/provisioning/datasources
+mkdir -p /etc/grafana/provisioning/dashboards
 
 # Create prometheus.yml
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating Prometheus configuration..."
@@ -56,6 +57,21 @@ scrape_configs:
   - job_name: 'node'
     static_configs:
       - targets: ['${app_private_ip}:9100']
+EOF
+
+# Create Grafana datasource provisioning configuration
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating Grafana datasource configuration..."
+cat > /etc/grafana/provisioning/datasources/prometheus.yml <<EOF
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      httpMethod: POST
 EOF
 
 # Create docker-compose.yml for monitoring
@@ -71,7 +87,7 @@ services:
       - /etc/prometheus:/etc/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--web.enable-admin-api'  # Enable admin API
+      - '--web.enable-admin-api'
     restart: always
 
   grafana:
@@ -79,28 +95,13 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_AUTH_ANONYMOUS_ENABLED=true  # Enable anonymous access
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin  # Give anonymous users Admin role
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - /etc/grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - prometheus
     restart: always
-EOF
-
-# Create Grafana dashboard configuration
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating Grafana dashboard provisioning..."
-mkdir -p /etc/grafana/provisioning/datasources
-mkdir -p /etc/grafana/provisioning/dashboards
-
-cat > /etc/grafana/provisioning/datasources/prometheus.yml <<EOF
-apiVersion: 1
-
-datasources:
-  - name: Prometheus
-    type: prometheus
-    access: proxy
-    url: http://prometheus:9090
-    isDefault: true
 EOF
 
 # Start monitoring stack
@@ -111,4 +112,4 @@ sudo docker compose up -d
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Monitoring setup complete."
 echo "Prometheus URL: http://localhost:9090"
 echo "Grafana URL: http://localhost:3000"
-echo "Grafana login: admin / admin"
+echo "Grafana login: Not required (anonymous access enabled)"

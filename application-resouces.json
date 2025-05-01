@@ -1,7 +1,7 @@
 {
   "Resources": [
     {
-      "Type": "AvailabilityZone",
+      "Type": "Zone",
       "Count": 2
     },
     {
@@ -20,19 +20,20 @@
     },
     {
       "Type": "Compute",
-      "Subtype": "EC2",
+      "Subtype": "Compute Engine",
       "Count": 3,
-      "InstanceType": "t2.micro"
+      "InstanceType": "e2-small"
     },
     {
       "Type": "Compute",
-      "Subtype": "EC2",
+      "Subtype": "Compute Engine",
       "Count": 1,
-      "InstanceType": "t2.medium"
+      "InstanceType": "e2-medium"
     },
     {
       "Type": "Database",
-      "Subtype": "RDS",
+      "Subtype": "CloudSQL",
+      "Engine": "Postgres",
       "Count": 1
     }
   ]

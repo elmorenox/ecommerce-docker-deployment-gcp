@@ -1,25 +1,77 @@
 [
   {
-    "user": "LuisMorenoStudent743_500",
-    "attached_policies": {
-      "AttachedPolicies": [
-        {
-          "PolicyName": "AdministratorAccess",
-          "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"
-        },
-        {
-          "PolicyName": "IAMUserChangePassword",
-          "PolicyArn": "arn:aws:iam::aws:policy/IAMUserChangePassword"
-        }
-      ]
-    },
-    "inline_policies": {
-      "PolicyNames": [
-        "JohnPolicy"
-      ]
-    },
-    "groups": {
-      "Groups": []
-    }
+    "user": "morenodoesinfra@gmail.com",
+    "roles": [
+      "roles/editor",
+      "roles/iam.serviceAccountAdmin",
+      "roles/resourcemanager.projectIamAdmin"
+    ]
+  },
+  {
+    "user": "practice-825817@appspot.gserviceaccount.com",
+    "roles": [],
+    "type": "service_account",
+    "service_account_keys": [
+      {
+        "keyAlgorithm": "KEY_ALG_RSA_2048",
+        "keyOrigin": "GOOGLE_PROVIDED",
+        "keyType": "SYSTEM_MANAGED",
+        "name": "projects/practice-825817/serviceAccounts/practice-825817@appspot.gserviceaccount.com/keys/4cd48f5d2ea5c2953553ccb9feba0314246615ed",
+        "validAfterTime": "2025-04-16T11:46:26Z",
+        "validBeforeTime": "2025-05-03T11:46:26Z"
+      },
+      {
+        "keyAlgorithm": "KEY_ALG_RSA_2048",
+        "keyOrigin": "GOOGLE_PROVIDED",
+        "keyType": "SYSTEM_MANAGED",
+        "name": "projects/practice-825817/serviceAccounts/practice-825817@appspot.gserviceaccount.com/keys/f305e8863be17d85570affc51b7466ace67285e5",
+        "validAfterTime": "2025-04-25T11:46:26Z",
+        "validBeforeTime": "2025-05-11T11:46:26Z"
+      }
+    ]
+  },
+  {
+    "user": "196224210857-compute@developer.gserviceaccount.com",
+    "roles": [],
+    "type": "service_account",
+    "service_account_keys": [
+      {
+        "keyAlgorithm": "KEY_ALG_RSA_2048",
+        "keyOrigin": "GOOGLE_PROVIDED",
+        "keyType": "SYSTEM_MANAGED",
+        "name": "projects/practice-825817/serviceAccounts/196224210857-compute@developer.gserviceaccount.com/keys/ce994648d705ef8f3605374b2d39e9e2a1f9430b",
+        "validAfterTime": "2025-04-25T11:46:26Z",
+        "validBeforeTime": "2025-05-11T11:46:26Z"
+      },
+      {
+        "keyAlgorithm": "KEY_ALG_RSA_2048",
+        "keyOrigin": "GOOGLE_PROVIDED",
+        "keyType": "SYSTEM_MANAGED",
+        "name": "projects/practice-825817/serviceAccounts/196224210857-compute@developer.gserviceaccount.com/keys/87d5222d55d1650d8f1d5ffa6b1e66fb6673ae88",
+        "validAfterTime": "2025-04-16T11:46:26Z",
+        "validBeforeTime": "2025-05-03T11:46:26Z"
+      }
+    ]
+  },
+  {
+    "user": "workloads-sa@practice-825817.iam.gserviceaccount.com",
+    "roles": [
+      "roles/cloudsql.admin",
+      "roles/compute.admin",
+      "roles/compute.networkAdmin",
+      "roles/iam.serviceAccountUser",
+      "roles/servicenetworking.serviceAgent"
+    ],
+    "type": "service_account",
+    "service_account_keys": [
+      {
+        "keyAlgorithm": "KEY_ALG_RSA_2048",
+        "keyOrigin": "GOOGLE_PROVIDED",
+        "keyType": "SYSTEM_MANAGED",
+        "name": "projects/practice-825817/serviceAccounts/workloads-sa@practice-825817.iam.gserviceaccount.com/keys/a401d2ab7b54d78d682801f8fd72b33dfba13971",
+        "validAfterTime": "2025-04-29T01:03:11Z",
+        "validBeforeTime": "2027-05-13T19:38:15Z"
+      }
+    ]
   }
 ]

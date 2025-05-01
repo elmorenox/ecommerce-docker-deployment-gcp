@@ -4,27 +4,42 @@
 exec > >(tee /var/log/monitoring-setup.log) 2>&1
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting monitoring setup on GCP..."
 
-# Update and install Docker
+# Update package lists
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Updating packages..."
-apt-get update
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Installing Docker..."
-apt-get install -y docker.io
-apt-get install -y python3-pip
-sudo apt-get install -y ca-certificates curl gnupg
+sudo apt-get update
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Package update complete"
+
+# Install dependencies
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Installing dependencies..."
+sudo apt-get install -y ca-certificates curl gnupg python3-pip
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Dependencies installed"
+
+# Set up Docker repository
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Setting up Docker repository..."
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# 3. Verify both Docker and Compose
+# Update package lists again with the new repository
+sudo apt-get update
+
+# Install Docker CE
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Installing Docker CE..."
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Docker CE installation complete"
+
+# Verify Docker installation
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Verifying Docker installation..."
 docker --version
 docker compose version
 
-sleep 15
+# Enable and start Docker service
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Docker service..."
+sudo systemctl enable docker
 sudo systemctl start docker
-sleep 15
+# Wait to ensure Docker is fully started
+sleep 5
 
 # Create directories
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating monitoring directories..."
@@ -88,7 +103,7 @@ EOF
 # Start monitoring stack
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting monitoring stack..."
 cd /etc/prometheus
-docker compose up -d
+sudo docker compose up -d
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Monitoring setup complete."
 echo "Prometheus URL: http://localhost:9090"

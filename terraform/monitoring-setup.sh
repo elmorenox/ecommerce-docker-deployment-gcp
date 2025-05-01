@@ -23,7 +23,7 @@ docker --version
 docker compose version
 
 sleep 15
-sudo sytemctl start docker
+sudo systemctl start docker
 sleep 15
 
 # Create directories

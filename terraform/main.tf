@@ -110,9 +110,12 @@ resource "google_compute_instance" "bastion" {
     }
   }
 
-  metadata_startup_script = templatefile("${path.module}/bastion.sh", {
-    private_key = sensitive(file("/home/ubuntu/.ssh/id_rsa"))
-  })
+  metadata = {
+      ssh_private_key  = file("/home/ubuntu/.ssh/id_rsa")
+  }
+
+  metadata_startup_script = file("${path.module}/bastion.sh")
+
 
   service_account {
     email  = var.service_account_email

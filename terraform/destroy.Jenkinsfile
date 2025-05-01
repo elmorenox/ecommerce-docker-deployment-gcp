@@ -10,7 +10,6 @@ pipeline {
     stages {
         stage('Destroy GCP Infrastructure') {
             steps {
-                // Add a confirmation prompt
                 input message: 'Are you sure you want to destroy the infrastructure?', ok: 'Yes, destroy it'
                 
                 sh '''

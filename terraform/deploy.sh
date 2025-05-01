@@ -22,9 +22,6 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 # 3. Verify both Docker and Compose
 docker --version
 docker compose version
-
-sudo systemctl start docker
-sleep 10
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Docker installation complete"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting Docker login..."
@@ -41,6 +38,10 @@ cat > docker-compose.yml <<EOF
 ${docker_compose}
 EOF
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] docker-compose.yml created"
+
+sleep 15
+sudo sytemctl start docker
+sleep 15
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Pulling Docker images..."
 sudo docker compose pull
